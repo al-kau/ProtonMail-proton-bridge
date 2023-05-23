@@ -345,13 +345,26 @@ func (bridge *Bridge) init(tlsReporter TLSReporter) error {
 	// Ensure all outgoing headers have the correct user agent.
 	bridge.api.AddPreRequestHook(func(_ *resty.Client, req *resty.Request) error {
 		req.SetHeader("User-Agent", bridge.identifier.GetUserAgent())
+
+		logrus.WithFields(logrus.Fields{
+			"url":    req.URL,
+			"method": req.Method,
+			"header": req.Header,
+			"body":   req.Body,
+		}).Infof("[API Request]")
 		return nil
 	})
 
 	// Log all manager API requests (client requests are logged separately).
 	bridge.api.AddPostRequestHook(func(_ *resty.Client, r *resty.Response) error {
 		if _, ok := proton.ClientIDFromContext(r.Request.Context()); !ok {
-			logrus.Infof("[MANAGER] %v: %v %v", r.Status(), r.Request.Method, r.Request.URL)
+			logrus.WithFields(logrus.Fields{
+				"url":    r.Request.URL,
+				"method": r.Request.Method,
+				"status": r.Status(),
+				"header": r.Header,
+				"body":   r.Body,
+			}).Infof("[API Response]")
 		}
 
 		return nil
