@@ -37,7 +37,7 @@ func defaultAPIOptions(
 ) []proton.Option {
 	return []proton.Option{
 		proton.WithHostURL(apiURL),
-		proton.WithAppVersion(constants.AppVersion(version.Original())),
+		proton.WithAppVersion(constants.AppDevVersion(version.Original())),
 		proton.WithCookieJar(cookieJar),
 		proton.WithTransport(transport),
 		proton.WithLogger(logrus.StandardLogger()),

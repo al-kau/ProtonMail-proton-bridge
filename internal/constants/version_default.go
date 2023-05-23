@@ -26,3 +26,7 @@ import "fmt"
 func AppVersion(version string) string {
 	return fmt.Sprintf("%v-%v@%v", getAPIOS(), AppName, version)
 }
+
+func AppDevVersion(version string) string {
+	return "Other"
+}
