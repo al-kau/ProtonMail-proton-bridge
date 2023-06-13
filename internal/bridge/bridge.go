@@ -21,6 +21,7 @@ package bridge
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -346,12 +347,21 @@ func (bridge *Bridge) init(tlsReporter TLSReporter) error {
 	bridge.api.AddPreRequestHook(func(_ *resty.Client, req *resty.Request) error {
 		req.SetHeader("User-Agent", bridge.identifier.GetUserAgent())
 
+		body, err := json.Marshal(req.Body)
+		if err != nil {
+			logrus.Warn("json.Marshal(req.Body)")
+			return nil
+		}
+
 		logrus.WithFields(logrus.Fields{
-			"url":    req.URL,
-			"method": req.Method,
-			"header": req.Header,
-			"body":   req.Body,
-		}).Infof("[API Request]")
+			"method":     req.Method,
+			"url":        req.URL,
+			"token":      req.Token,
+			"header":     req.Header,
+			"pathParam":  req.PathParams,
+			"queryParam": req.QueryParam,
+		}).Infof("[API Request] Body: %s", body)
+
 		return nil
 	})
 
@@ -363,8 +373,7 @@ func (bridge *Bridge) init(tlsReporter TLSReporter) error {
 				"method": r.Request.Method,
 				"status": r.Status(),
 				"header": r.Header,
-				"body":   r.Body,
-			}).Infof("[API Response]")
+			}).Infof("[API Response] Body: %s", r.Body())
 		}
 
 		return nil
