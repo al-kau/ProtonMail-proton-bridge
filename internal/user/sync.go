@@ -513,7 +513,22 @@ func (user *User) syncMessages(
 				result, err := parallel.MapContext(ctx, maxMessagesInParallel, chunk, func(ctx context.Context, msg proton.FullMessage) (*buildRes, error) {
 					defer async.HandlePanic(user.panicHandler)
 
-					return buildRFC822(apiLabels, msg, addrKRs[msg.AddressID], new(bytes.Buffer)), nil
+					kr, ok := addrKRs[msg.AddressID]
+					if !ok {
+						logrus.Errorf("Address '%v' on message '%v' does not have an unlocked kerying", msg.AddressID, msg.ID)
+						return &buildRes{
+							messageID: msg.ID,
+							addressID: msg.AddressID,
+							err:       fmt.Errorf("address does not have an unlocked keyring"),
+						}, nil
+					}
+
+					res := buildRFC822(apiLabels, msg, kr, new(bytes.Buffer))
+					if res.err != nil {
+						logrus.WithError(res.err).WithField("msgID", msg.ID).Error("Failed to build message (syn)")
+					}
+
+					return res, nil
 				})
 				if err != nil {
 					return
@@ -572,10 +587,10 @@ func (user *User) syncMessages(
 
 					// We could sync a placeholder message here, but for now we skip it entirely.
 					continue
-				} else {
-					if err := vault.RemFailedMessageID(res.messageID); err != nil {
-						logrus.WithError(err).Error("Failed to remove failed message ID")
-					}
+				}
+
+				if err := vault.RemFailedMessageID(res.messageID); err != nil {
+					logrus.WithError(err).Error("Failed to remove failed message ID")
 				}
 
 				targetInfo := addressToIndex[res.addressID]

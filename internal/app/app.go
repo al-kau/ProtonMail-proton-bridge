@@ -19,14 +19,12 @@ package app
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
-	"time"
 
 	"github.com/Masterminds/semver/v3"
 	"github.com/ProtonMail/gluon/async"
@@ -160,9 +158,6 @@ func New() *cli.App {
 }
 
 func run(c *cli.Context) error {
-	// Seed the default RNG from the math/rand package.
-	rand.Seed(time.Now().UnixNano())
-
 	// Get the current bridge version.
 	version, err := semver.NewVersion(constants.Version)
 	if err != nil {
@@ -219,16 +214,6 @@ func run(c *cli.Context) error {
 						return withSingleInstance(settings, locations.GetLockFile(), version, func() error {
 							// Unlock the encrypted vault.
 							return WithVault(locations, crashHandler, func(v *vault.Vault, insecure, corrupt bool) error {
-								// Report insecure vault.
-								if insecure {
-									_ = reporter.ReportMessageWithContext("Vault is insecure", map[string]interface{}{})
-								}
-
-								// Report corrupt vault.
-								if corrupt {
-									_ = reporter.ReportMessageWithContext("Vault is corrupt", map[string]interface{}{})
-								}
-
 								if !v.Migrated() {
 									// Migrate old settings into the vault.
 									if err := migrateOldSettings(v); err != nil {
@@ -337,9 +322,11 @@ func withLogging(c *cli.Context, crashHandler *crash.Handler, locations *locatio
 		WithField("appName", constants.FullAppName).
 		WithField("version", constants.Version).
 		WithField("revision", constants.Revision).
+		WithField("tag", constants.Tag).
 		WithField("build", constants.BuildTime).
 		WithField("runtime", runtime.GOOS).
 		WithField("args", os.Args).
+		WithField("SentryID", sentry.GetProtectedHostname()).
 		Info("Run app")
 
 	return fn()

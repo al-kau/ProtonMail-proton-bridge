@@ -37,6 +37,7 @@ import (
 	"github.com/ProtonMail/proton-bridge/v3/pkg/message/parser"
 	"github.com/bradenaw/juniper/stream"
 	"github.com/bradenaw/juniper/xslices"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/slices"
 )
 
@@ -270,7 +271,7 @@ func (conn *imapConnector) CreateMessage(
 	mailboxID imap.MailboxID,
 	literal []byte,
 	flags imap.FlagSet,
-	date time.Time,
+	_ time.Time,
 ) (imap.Message, []byte, error) {
 	defer conn.goPollAPIEvents(false)
 
@@ -355,6 +356,12 @@ func (conn *imapConnector) CreateMessage(
 	if err != nil && errors.Is(err, proton.ErrImportSizeExceeded) {
 		// Remap error so that Gluon does not put this message in the recovery mailbox.
 		err = fmt.Errorf("%v: %w", err, connector.ErrMessageSizeExceedsLimits)
+	}
+
+	if apiErr := new(proton.APIError); errors.As(err, &apiErr) {
+		logrus.WithError(apiErr).WithField("Details", apiErr.DetailsToString()).Error("Failed to import message")
+	} else {
+		logrus.WithError(err).Error("Failed to import message")
 	}
 
 	return msg, literal, err
@@ -459,11 +466,11 @@ func (conn *imapConnector) MoveMessages(ctx context.Context, messageIDs []imap.M
 		var result bool
 
 		if v, ok := conn.apiLabels[string(labelFromID)]; ok && v.Type == proton.LabelTypeLabel {
-			result = result || true
+			result = true
 		}
 
 		if v, ok := conn.apiLabels[string(labelToID)]; ok && (v.Type == proton.LabelTypeFolder || v.Type == proton.LabelTypeSystem) {
-			result = result || true
+			result = true
 		}
 
 		return result
@@ -529,7 +536,7 @@ func (conn *imapConnector) GetMailboxVisibility(_ context.Context, mailboxID ima
 }
 
 // Close the connector will no longer be used and all resources should be closed/released.
-func (conn *imapConnector) Close(ctx context.Context) error {
+func (conn *imapConnector) Close(_ context.Context) error {
 	return nil
 }
 
@@ -544,7 +551,7 @@ func (conn *imapConnector) importMessage(
 
 	if err := safe.RLockRet(func() error {
 		return withAddrKR(conn.apiUser, conn.apiAddrs[conn.addrID], conn.vault.KeyPass(), func(_, addrKR *crypto.KeyRing) error {
-			messageID := ""
+			var messageID string
 
 			if slices.Contains(labelIDs, proton.DraftsLabel) {
 				msg, err := conn.createDraft(ctx, literal, addrKR, conn.apiAddrs[conn.addrID])

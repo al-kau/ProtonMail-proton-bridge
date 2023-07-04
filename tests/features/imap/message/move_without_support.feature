@@ -4,17 +4,20 @@ Feature: IMAP move messages by append and delete (without MOVE support, e.g., Ou
     And the account "[user:user]" has the following custom mailboxes:
       | name | type   |
       | mbox | folder |
-    And bridge starts
+    Then it succeeds
+    When bridge starts
     And the user logs in with username "[user:user]" and password "password"
     And user "[user:user]" finishes syncing
     And user "[user:user]" connects and authenticates IMAP client "source"
     And user "[user:user]" connects and authenticates IMAP client "target"
+    Then it succeeds
 
   Scenario Outline: Move message from <srcMailbox> to <dstMailbox> by <order>
     When IMAP client "source" appends the following message to "<srcMailbox>":
       """
       Received: by 2002:0:0:0:0:0:0:0 with SMTP id 0123456789abcdef; Wed, 30 Dec 2020 01:23:45 0000
       From: sndr1@[domain]
+      Date: 01 Jan 1980 00:00:00 +0000
       To: rcvr1@[domain]
       Subject: subj1
 
@@ -25,6 +28,7 @@ Feature: IMAP move messages by append and delete (without MOVE support, e.g., Ou
       """
       Received: by 2002:0:0:0:0:0:0:0 with SMTP id 0123456789abcdef; Wed, 30 Dec 2020 01:23:45 0000
       From: sndr2@[domain]
+      Date: 01 Jan 1980 00:00:00 +0000
       To: rcvr2@[domain]
       Subject: subj2
 

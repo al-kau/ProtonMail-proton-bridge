@@ -20,8 +20,10 @@ package bridge
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/ProtonMail/proton-bridge/v3/internal/safe"
+	"github.com/ProtonMail/proton-bridge/v3/internal/useragent"
 	"github.com/emersion/go-smtp"
 	"github.com/sirupsen/logrus"
 )
@@ -55,8 +57,16 @@ func (s *smtpSession) AuthPlain(username, password string) error {
 			s.userID = user.ID()
 			s.authID = addrID
 
+			if strings.Contains(s.Bridge.GetCurrentUserAgent(), useragent.DefaultUserAgent) {
+				s.Bridge.setUserAgent(useragent.UnknownClient, useragent.DefaultVersion)
+			}
 			return nil
 		}
+
+		logrus.WithFields(logrus.Fields{
+			"username": username,
+			"pkg":      "smtp",
+		}).Error("Incorrect login credentials.")
 
 		return fmt.Errorf("invalid username or password")
 	}, s.usersLock)
@@ -72,7 +82,7 @@ func (s *smtpSession) Logout() error {
 	return nil
 }
 
-func (s *smtpSession) Mail(from string, opts *smtp.MailOptions) error {
+func (s *smtpSession) Mail(from string, _ *smtp.MailOptions) error {
 	s.from = from
 	return nil
 }

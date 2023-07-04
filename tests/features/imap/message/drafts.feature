@@ -1,21 +1,25 @@
 Feature: IMAP Draft messages
   Background:
     Given there exists an account with username "[user:user]" and password "password"
-    And bridge starts
+    Then it succeeds
+    When bridge starts
     And the user logs in with username "[user:user]" and password "password"
     And user "[user:user]" finishes syncing
     And user "[user:user]" connects and authenticates IMAP client "1"
     And IMAP client "1" selects "Drafts"
     When IMAP client "1" appends the following message to "Drafts":
       """
+      From: foo@bar.com
+      Date: 01 Jan 1980 00:00:00 +0000
 
       This is a dra
       """
-    And it succeeds
-    Then IMAP client "1" eventually sees the following messages in "Drafts":
+    Then it succeeds
+    And IMAP client "1" eventually sees the following messages in "Drafts":
       | body          |
       | This is a dra |
     And IMAP client "1" eventually sees 1 messages in "Drafts"
+
 
   Scenario: Draft edited locally
     When IMAP client "1" marks message 1 as deleted
@@ -23,6 +27,8 @@ Feature: IMAP Draft messages
     And it succeeds
     And IMAP client "1" appends the following message to "Drafts":
       """
+      From: foo@bar.com
+      Date: 01 Jan 1980 00:00:00 +0000
       Subject: Basic Draft
       Content-Type: text/plain
       To: someone@example.com
